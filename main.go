@@ -44,9 +44,11 @@ func initWebServer() *gin.Engine {
 	server := gin.Default()
 
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"PUT", "GET", "POST", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowOrigins: []string{"http://localhost:3000"},
+		AllowMethods: []string{"PUT", "GET", "POST", "DELETE"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		// 不加前端拿不到,后端返回的
+		ExposeHeaders:    []string{"x-jwt-token"},
 		AllowCredentials: true, //允许携带凭证
 	}))
 	//store := cookie.NewStore([]byte("secret"))
@@ -57,7 +59,8 @@ func initWebServer() *gin.Engine {
 	}
 
 	server.Use(sessions.Sessions("mysession", store))
-	server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())
+	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())
 	return server
 }
 
