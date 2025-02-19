@@ -51,7 +51,7 @@ func initWebServer() *gin.Engine {
 	}))
 	//store := cookie.NewStore([]byte("secret"))
 	// 多个参最大空闲连接数
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", []byte("eaba3041-e2aa-440b-9b5e-05dbab61630e"), []byte("eaba1db08e-1a0e-421e-b636-d5b98b7f78e0"))
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", []byte("eaba3041e2aa440b9b5e05dbab6163"), []byte("eaba1db08e1a0e421eb636d5b98b7f78"))
 	if err != nil {
 		panic(err)
 	}
