@@ -5,25 +5,29 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	redisDb "github.com/redis/go-redis/v9"
 	"go_project/gin/internal/repository"
 	"go_project/gin/internal/repository/dao"
 	"go_project/gin/internal/service"
 	"go_project/gin/internal/web"
 	"go_project/gin/internal/web/middleware"
+	"go_project/gin/pkg/ginx/middleware/ratelimit"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"net/http"
+	"time"
 )
 
 func main() {
+	//db := initDb()
+	//u := initUser(db)
+	//server := initWebServer()
+	//u.RegisterRoutes(server)
 
-	db := initDb()
-
-	u := initUser(db)
-
-	server := initWebServer()
-
-	u.RegisterRoutes(server)
-
+	server := gin.Default()
+	server.GET("/ping", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"error": "", "msg": "ping..."})
+	})
 	server.Run(":8080")
 }
 
@@ -57,6 +61,12 @@ func initWebServer() *gin.Engine {
 	if err != nil {
 		panic(err)
 	}
+
+	redisClient := redisDb.NewClient(&redisDb.Options{
+		Addr: "localhost:6379",
+	})
+	// 限流,1秒钟限制 100
+	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
 	server.Use(sessions.Sessions("mysession", store))
 	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())

@@ -5,12 +5,34 @@ internal
 - repository 领域存储,存储数据的抽象
 
 
-gin 本项目
+# gin 本项目
 - docker compose up/down
 - go run main.go
 
 
-webook-fe 前端项目
+# webook-fe 前端项目
 - npm run dev
- 
+
+#安装 kubectl 工具
+- brew install kubectl
+- kubectl version --client 查看版本
+
+#使用 k8s部署
+
+## 生成 linux 二进制文件
+GOOS=linux GOARCH=arm go build -o webook .
+- GOOS:平台
+- GOARCH:架构
+- -o 输出文件 
+- webook 输出文件名
+- . 当前目录
+## 将 webook 塞进去
+
+## 构建镜像命令
+docker build -t webook:v1 .
+
+
+
+
+需要一个 service,一个 development 管理 3 个 pod
 

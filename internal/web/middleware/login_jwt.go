@@ -3,9 +3,10 @@ package middleware
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go_project/gin/consts"
+	"go_project/gin/internal/web"
 	"net/http"
 	"strings"
 	"time"
@@ -43,7 +44,8 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		tokenStr := args[1]
 		fmt.Println("token", tokenStr)
 
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (i interface{}, e error) {
+		userClaims := &web.UserClaims{}
+		token, err := jwt.ParseWithClaims(tokenStr, userClaims, func(token *jwt.Token) (i interface{}, e error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
@@ -53,36 +55,49 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
 			return
 		}
+
 		fmt.Println("token.Valid", token.Valid)
 		if token == nil || !token.Valid {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
 			return
 		}
 
-		// 确定 auth 是否有效
-		claims, _ := token.Claims.(jwt.MapClaims)
-		if lts, ok := claims["expire_at"].(string); !ok || time.Now().UTC().Format(time.DateTime) > lts {
-			err = fmt.Errorf("token expired")
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
-			return
-		}
-		fmt.Println("claims", claims)
-		fmt.Println("id", claims["id"])
+		// 使用 registered Claims的 expired_at ,解析不要判断过期时间,只判断是否有效 token.Valid
+		//// 确定 auth 是否有效
+		//claims, _ := token.Claims.(jwt.MapClaims)
+		//if lts, ok := claims["expire_at"].(string); !ok || time.Now().UTC().Format(time.DateTime) > lts {
+		//	err = fmt.Errorf("token expired")
+		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+		//	return
+		//}
+		//fmt.Println("claims", claims)
+		//fmt.Println("id", claims["id"])
 
 		//解析用户的 ID
-		id, ok := claims["id"]
-		if !ok {
-			err = fmt.Errorf("not id")
+		//id, ok := claims["id"]
+		//if !ok {
+		//	err = fmt.Errorf("not id")
+		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+		//	return
+		//}
+		//
+		//userId, ok := id.(float64)
+		//if !ok {
+		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+		//	return
+		//}
+		if userClaims.UserAgent != ctx.Request.UserAgent() {
+			// 风险检查,设备信息是否一致
 			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
 			return
 		}
 
-		userId, ok := id.(float64)
-		if !ok {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
-			return
-		}
-		ctx.Set("user_id", int64(userId))
+		userClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 2))
+		tokenStr, _ = token.SignedString(consts.GetAuthSecret())
+
+		ctx.Header("x-jwt-token", tokenStr)
+		fmt.Println("===>", userClaims.UId)
+		ctx.Set("user_id", userClaims.UId)
 
 	}
 }

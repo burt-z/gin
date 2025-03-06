@@ -2,9 +2,9 @@ package web
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go_project/gin/consts"
 	"go_project/gin/internal/domain"
 	"go_project/gin/internal/service"
@@ -118,12 +118,12 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": err.Error()})
 		return
 	}
-	expireStr := time.Now().UTC().Add(time.Hour * 2).Format(time.DateTime)
-	claims := jwt.MapClaims{
-		"id":        member.Id,
-		"expire_at": expireStr,
+	userClaims := UserClaims{
+		UId:              member.Id,
+		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 2))},
+		UserAgent:        ctx.Request.UserAgent(),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, userClaims)
 	tokenStr, err := token.SignedString([]byte(consts.GetAuthSecret()))
 	if err != nil {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": err.Error()})
@@ -199,4 +199,10 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"status": 200, "Id": user.Id, "Email": user.Email, "Birthday": user.Birthday, "Nickname": user.NickName, "AboutMe": user.AboutMe, "data": map[string]interface{}{"code": 0, "msg": "success"}})
+}
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	UId       int64  `json:"id"`
+	UserAgent string `json:"user_agent"`
 }
