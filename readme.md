@@ -30,6 +30,20 @@ GOOS=linux GOARCH=arm go build -o webook .
 
 ## 构建镜像命令
 docker build -t webook:v1 .
+## 使用 Makefile 文件构建
+执行命令 make docker
+代码需要有变化,代码无变化 image 更新时间不变.
+
+## gin 的 k8s 部署
+kubectl apply -f k8s_webook_deployment.yaml
+查看是否成功
+kubectl get developments
+
+kubectl apply -f k8s_webook_service.yaml
+查看是否成功
+kubectl get services
+
+
 
 
 

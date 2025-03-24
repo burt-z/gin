@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: webook
+spec:
+    replicas: 3
+    selector:
+        matchLabels:
+            app: webook
+#    描述 pod
+    template:
+        metadata:
+            labels:
+                app: webook
+#        pod 的具体信息
+        spec:
+            containers:
+                - name: webook
+                  image: flycash/webook:v0.0.1
+                  ports:
+#                      对应服务的 8080端口
+                      -   containerPort: 8080
