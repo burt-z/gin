@@ -5,9 +5,9 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"go_project/gin/consts"
-	"go_project/gin/internal/domain"
-	"go_project/gin/internal/service"
+	"jike_gin/consts"
+	"jike_gin/internal/domain"
+	"jike_gin/internal/service"
 	"net/http"
 	"regexp"
 	"time"
@@ -137,6 +137,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 
 func (u *UserHandler) Logout(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
+	// 退出登录
 	sess.Options(sessions.Options{MaxAge: -1})
 	sess.Save()
 	ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 0, "msg": "登出成功"})

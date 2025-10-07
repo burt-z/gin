@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"go_project/gin/internal/domain"
-	"go_project/gin/internal/repository"
 	"golang.org/x/crypto/bcrypt"
+	"jike_gin/internal/domain"
+	"jike_gin/internal/repository"
 )
 
 type UserService struct {

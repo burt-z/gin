@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"go_project/gin/consts"
-	"go_project/gin/internal/web"
+	"jike_gin/consts"
+	"jike_gin/internal/web"
 	"net/http"
 	"strings"
 	"time"
@@ -34,7 +34,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 				return
 			}
 		}
-		// webook 里面拼接了 banner
+		// webook前端 里面拼接了 Bearer
 		authorization := ctx.GetHeader("authorization")
 		args := strings.Split(authorization, " ")
 		if len(args) != 2 {

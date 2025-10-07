@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"go_project/gin/internal/domain"
-	"go_project/gin/internal/repository/dao"
+	"jike_gin/internal/domain"
+	"jike_gin/internal/repository/dao"
 )
 
 type UserRepository struct {

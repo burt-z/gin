@@ -1,3 +1,7 @@
+# 源码地址 
+https://gitee.com/wei-jie-zhu-code/geektime-basic-go/tree/master/webook
+
+
 # 层级
 internal
 - domain 领域对象,
@@ -9,9 +13,11 @@ internal
 - docker compose up/down
 - go run main.go
 
-
 # webook-fe 前端项目
 - npm run dev
+
+# 注意事项
+CreateUser(db) 会创建数据表
 
 #安装 kubectl 工具
 - brew install kubectl
