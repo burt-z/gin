@@ -1,22 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
+# 叫什么
 metadata:
-    name: webook
+    name:  gin-webook
+# 规格说明
 spec:
+#    副本数量
     replicas: 3
     selector:
         matchLabels:
-            app: webook
-#    描述 pod
+#            与下面的 labels 名称对应
+            app: gin-webook
+#    描述 pod 是什么样的
     template:
         metadata:
+            # 根据标签找资源
             labels:
-                app: webook
+                app: gin-webook
 #        pod 的具体信息
         spec:
             containers:
-                - name: webook
-                  image: flycash/webook:v0.0.1
+                - name: gin-webook
+                  image: gin-webook:v0.0.1
                   ports:
 #                      对应服务的 8080端口
                       -   containerPort: 8080

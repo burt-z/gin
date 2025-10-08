@@ -52,51 +52,37 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return []byte(consts.GetAuthSecret()), e
 		})
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		fmt.Println("token.Valid", token.Valid)
 		if token == nil || !token.Valid {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		// 使用 registered Claims的 expired_at ,解析不要判断过期时间,只判断是否有效 token.Valid
-		//// 确定 auth 是否有效
+		//使用 registered Claims的 expired_at ,解析不要判断过期时间,只判断是否有效 token.Valid
+		// 确定 auth 是否有效
 		//claims, _ := token.Claims.(jwt.MapClaims)
 		//if lts, ok := claims["expire_at"].(string); !ok || time.Now().UTC().Format(time.DateTime) > lts {
 		//	err = fmt.Errorf("token expired")
-		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+		//	fmt.Println("build_jwt===>", err, claims)
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
 		//	return
 		//}
-		//fmt.Println("claims", claims)
-		//fmt.Println("id", claims["id"])
 
-		//解析用户的 ID
-		//id, ok := claims["id"]
-		//if !ok {
-		//	err = fmt.Errorf("not id")
-		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
-		//	return
-		//}
-		//
-		//userId, ok := id.(float64)
-		//if !ok {
-		//	ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
-		//	return
-		//}
 		if userClaims.UserAgent != ctx.Request.UserAgent() {
 			// 风险检查,设备信息是否一致
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		userClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 2))
 		tokenStr, _ = token.SignedString(consts.GetAuthSecret())
-
+		// 续约
 		ctx.Header("x-jwt-token", tokenStr)
-		fmt.Println("===>", userClaims.UId)
+		fmt.Println("build_jwt uid===>", userClaims.UId)
 		ctx.Set("user_id", userClaims.UId)
 
 	}

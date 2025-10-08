@@ -1,16 +1,20 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: webook
+  name: gin-webook
 spec:
 #   把 Service 当成一个负载均衡器
   type: LoadBalancer
   selector:
-    app: webook
+    app: gin-webook
   ports:
     - protocol: TCP
 #     这个可以换,对应请求里面的
       port: 80
       name: http
 #      和 development 里面的一直,和服务里面的一致
+      targetPort: 8080
+    - protocol: TCP
+      port: 443
+      name: https
       targetPort: 8080

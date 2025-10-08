@@ -14,19 +14,20 @@ import (
 	"jike_gin/internal/web"
 	"jike_gin/internal/web/middleware"
 	"jike_gin/pkg/ginx/middleware/ratelimit"
+	"net/http"
 	"time"
 )
 
 func main() {
-	db := initDb()
-	u := initUser(db)
-	server := initWebServer()
-	u.RegisterRoutes(server)
+	//db := initDb()
+	//u := initUser(db)
+	//server := initWebServer()
+	//u.RegisterRoutes(server)
 
-	//server := gin.Default()
-	//server.GET("/ping", func(ctx *gin.Context) {
-	//	ctx.JSON(http.StatusOK, gin.H{"error": "", "msg": "ping..."})
-	//})
+	server := gin.Default()
+	server.GET("/ping", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"error": "", "msg": "ping..."})
+	})
 	server.Run(":8080")
 }
 
