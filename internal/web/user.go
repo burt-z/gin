@@ -49,7 +49,7 @@ func (u *UserHandler) SingUp(ctx *gin.Context) {
 	}
 	isSafe := u.emailRegexp.MatchString(p.Email)
 	if !isSafe {
-		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": "邮箱格式错误"})
+		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": "邮箱格式错误", "email": p.Email})
 		return
 	}
 	err = u.svc.Signup(ctx, domain.User{Email: p.Email, Password: p.Password})

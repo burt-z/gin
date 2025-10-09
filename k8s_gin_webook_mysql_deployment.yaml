@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gin-webook-mysql
+  labels:
+    app: gin-webook-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gin-webook-mysql
+  template:
+    metadata:
+      name: gin-webook-mysql
+      labels:
+        app: gin-webook-mysql
+    spec:
+      containers:
+        - name: gin-webook-mysql
+          image: mysql:8.0
+#          用的pod里面具体哪个 volume
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+#              要和下面的匹配
+              name: mysql-storage
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+#          没有就去拉,还有一个每次都拉
+          imagePullPolicy: IfNotPresent
+          ports:
+#            暴露的端口
+            - containerPort: 3306
+#      为什么有两个volumes;下面的这个是整个 pod下面有哪些 volume
+      volumes:
+#        要和上面的匹配
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: gin-webook-mysql-pvc
+      restartPolicy: Always
+
+  

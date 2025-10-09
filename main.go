@@ -8,6 +8,7 @@ import (
 	redisDb "github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"jike_gin/config"
 	"jike_gin/internal/repository"
 	"jike_gin/internal/repository/dao"
 	"jike_gin/internal/service"
@@ -15,16 +16,17 @@ import (
 	"jike_gin/internal/web/middleware"
 	"jike_gin/pkg/ginx/middleware/ratelimit"
 	"net/http"
+	"strings"
 	"time"
 )
 
 func main() {
-	//db := initDb()
-	//u := initUser(db)
-	//server := initWebServer()
-	//u.RegisterRoutes(server)
+	db := initDb()
+	u := initUser(db)
+	server := initWebServer()
+	u.RegisterRoutes(server)
 
-	server := gin.Default()
+	//server := gin.Default()
 	server.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"error": "", "msg": "ping..."})
 	})
@@ -32,7 +34,7 @@ func main() {
 }
 
 func initDb() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook"))
+	db, err := gorm.Open(mysql.Open(config.Config.Db.DSN), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -54,16 +56,22 @@ func initWebServer() *gin.Engine {
 		// 不加前端拿不到,后端返回的
 		ExposeHeaders:    []string{"x-jwt-token"},
 		AllowCredentials: true, //允许携带凭证
+		AllowOriginFunc: func(origin string) bool {
+			if strings.HasPrefix(origin, "http://localhost") {
+				return true
+			}
+			return strings.Contains(origin, "live.webook.com")
+		},
 	}))
 	//store := cookie.NewStore([]byte("secret"))
 	// 多个参最大空闲连接数
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", "", []byte("eaba3041e2aa440b9b5e05dbab6163"), []byte("eaba1db08e1a0e421eb636d5b98b7f78"))
+	store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "", "", []byte("eaba3041e2aa440b9b5e05dbab6163"), []byte("eaba1db08e1a0e421eb636d5b98b7f78"))
 	if err != nil {
 		panic(err)
 	}
 
 	redisClient := redisDb.NewClient(&redisDb.Options{
-		Addr: "localhost:6379",
+		Addr: config.Config.Redis.Addr,
 	})
 	// 限流,1秒钟限制 100
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())

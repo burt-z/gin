@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gin-webook-redis
+  labels:
+    app: gin-webook-redis
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gin-webook-redis
+  template:
+    metadata:
+      name: gin-webook-redis
+      labels:
+        app: gin-webook-redis
+    spec:
+      containers:
+        - name: gin-webook-redis
+          image: redis:latest
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+
+  

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+#  对应 deployment里面 spec.template.volumes.persistentVolumeClaim.claimName的名字
+  name: gin-webook-mysql-pvc
+
+spec:
+#   和后面的保持一致
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+

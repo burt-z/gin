@@ -65,7 +65,50 @@ kubectl apply -f k8s_webook_service.yaml
 查看是否成功
 kubectl get services
 
-# 如果执行
+# 查看
+kubectl get pv
+kubectl get pvc
+
+# 删除
+kubectl delete pv 名字
+kubectl delete pvc 名字
+
+# k8s 部署 mysql
+kubectl apply -f  k8s_gin_webook_mysql_service.yaml
+
+kubectl apply -f  k8s_gin_webook_mysql_deployment.yaml
+kubectl apply -f  k8s_gin_webook_mysql_pvc.yaml
+kubectl apply -f  k8s_gin_webook_mysql_pv.yaml
+
+# k8s 部署 redis
+kubectl apply -f k8s_gin_webook_redis_service.yaml
+kubectl apply -f k8s_gin_webook_redis_deployment.yaml
+
+# 部署 ingress-nginx
+kubectl apply -f k8s_gin_webook_ingress_nginx.yaml
+里面有个 host: live.webook.com 的配置,需要配置 host文件,配合解析
+sudo vim /etc/hosts
+增加下面的配置
+127.0.0.1 live.webook.com
+
+
+
+# 本地连接 k8s 里面的 redis
+redis-cli -h localhost -p 30003
+
+
+# 安装 ingress-nginx 的区别
+本地
+--install ingress-nginx ingress-nginx/ingress-nginx \
+
+教程里面
+--install ingress-nginx ingress-nginx \
+
+
+ide 里面访问 service 里面暴露的 port,targetPort 对应 deployment里面的containers下面的 port
+
+# //go:build k8s 的作用,有两个变量 Config,加了 go:build 不会冲突
+go build -tags=k8s
 
 
 
