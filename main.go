@@ -2,27 +2,26 @@ package main
 
 import (
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	redisDb "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"jike_gin/config"
 	"jike_gin/internal/repository"
+	"jike_gin/internal/repository/cache"
 	"jike_gin/internal/repository/dao"
 	"jike_gin/internal/service"
+	"jike_gin/internal/service/sms/memory"
 	"jike_gin/internal/web"
 	"jike_gin/internal/web/middleware"
-	"jike_gin/pkg/ginx/middleware/ratelimit"
 	"net/http"
 	"strings"
-	"time"
 )
 
 func main() {
 	db := initDb()
-	u := initUser(db)
+	rdb := initRedis()
+	u := initUser(db, rdb)
 	server := initWebServer()
 	u.RegisterRoutes(server)
 
@@ -42,8 +41,25 @@ func initDb() *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
-	return web.NewUserHandler(service.NewUserService(repository.NewUserRepository(dao.NewUserDao(db))))
+func initRedis() redis.Cmdable {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
+	return redisClient
+}
+
+func initUser(db *gorm.DB, rdb redis.Cmdable) *web.UserHandler {
+	ud := dao.NewUserDao(db)
+	uc := cache.NewUserCache(rdb)
+	repo := repository.NewUserRepository(ud, uc)
+	svc := service.NewUserService(repo)
+	codeCache := cache.NewCodeCache(rdb)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	//c, _ := sms.NewClient(common.NewCredential("", ""), "", profile.NewClientProfile())
+	//smsService := tencent.NewService(context.Background(), "", "", c)
+	smsService := memory.NewService()
+	codeSvc := service.NewCodeService(codeRepo, smsService)
+	return web.NewUserHandler(svc, codeSvc)
 }
 
 func initWebServer() *gin.Engine {
@@ -65,20 +81,25 @@ func initWebServer() *gin.Engine {
 	}))
 	//store := cookie.NewStore([]byte("secret"))
 	// 多个参最大空闲连接数
-	store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "", "", []byte("eaba3041e2aa440b9b5e05dbab6163"), []byte("eaba1db08e1a0e421eb636d5b98b7f78"))
-	if err != nil {
-		panic(err)
-	}
+	//store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "", "", []byte("eaba3041e2aa440b9b5e05dbab6163"), []byte("eaba1db08e1a0e421eb636d5b98b7f78"))
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	redisClient := redisDb.NewClient(&redisDb.Options{
-		Addr: config.Config.Redis.Addr,
-	})
-	// 限流,1秒钟限制 100
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	//redisClient := redisDb.NewClient(&redisDb.Options{
+	//	Addr: config.Config.Redis.Addr,
+	//})
+	//// 限流,1秒钟限制 100
+	//server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
-	server.Use(sessions.Sessions("mysession", store))
+	//server.Use(sessions.Sessions("mysession", store))
 	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())
-	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePath("/users/login").IgnorePath("/users/signup").Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
+		IgnorePath("/users/login_sms").
+		IgnorePath("/users/login_sms/code/send").
+		IgnorePath("/users/login").
+		IgnorePath("/users/signup").
+		Build())
 	return server
 }
 

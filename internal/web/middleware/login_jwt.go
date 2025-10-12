@@ -78,7 +78,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
-		userClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 2))
+		userClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
 		tokenStr, _ = token.SignedString(consts.GetAuthSecret())
 		// 续约
 		ctx.Header("x-jwt-token", tokenStr)

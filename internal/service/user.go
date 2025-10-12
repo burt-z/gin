@@ -4,33 +4,42 @@ import (
 	"context"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 	"jike_gin/internal/domain"
 	"jike_gin/internal/repository"
 )
 
-type UserService struct {
-	resp *repository.UserRepository
+type UserService interface {
+	Signup(ctx context.Context, user domain.User) error
+	Login(ctx context.Context, user domain.User) (domain.User, error)
+	ProfileEdit(ctx context.Context, user domain.User) error
+	Profile(ctx context.Context, id int64) (domain.User, error)
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 }
 
-func NewUserService(resp *repository.UserRepository) *UserService {
-	return &UserService{
-		resp: resp,
+type userService struct {
+	repo repository.UserRepository
+}
+
+func NewUserService(resp repository.UserRepository) UserService {
+	return &userService{
+		repo: resp,
 	}
 }
 
 // Signup 用户注册, 定义一个 user,保证数据是向下传递,不使用handler,数据也出现不一致了
-func (u *UserService) Signup(ctx context.Context, user domain.User) error {
+func (u *userService) Signup(ctx context.Context, user domain.User) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	user.Password = string(hash)
-	return u.resp.Create(ctx, user)
+	return u.repo.Create(ctx, user)
 }
 
 // Login 登录
-func (u *UserService) Login(ctx context.Context, user domain.User) (domain.User, error) {
-	row, err := u.resp.FindByEmail(ctx, user.Email)
+func (u *userService) Login(ctx context.Context, user domain.User) (domain.User, error) {
+	row, err := u.repo.FindByEmail(ctx, user.Email)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -42,12 +51,28 @@ func (u *UserService) Login(ctx context.Context, user domain.User) (domain.User,
 }
 
 // ProfileEdit 编辑
-func (u *UserService) ProfileEdit(ctx context.Context, user domain.User) error {
-	err := u.resp.Update(ctx, user)
+func (u *userService) ProfileEdit(ctx context.Context, user domain.User) error {
+	err := u.repo.Update(ctx, user)
 	return err
 }
 
-func (u *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
-	domainUser, err := u.resp.FindById(ctx, id)
+func (u *userService) Profile(ctx context.Context, id int64) (domain.User, error) {
+	domainUser, err := u.repo.FindById(ctx, id)
 	return domainUser, err
+}
+
+func (u *userService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	domainUser, err := u.repo.FindByPhone(ctx, phone)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.User{}, err
+	}
+	if domainUser.Id > 0 {
+		return domainUser, nil
+	}
+	newU := domain.User{Phone: phone}
+	err = u.repo.Create(ctx, newU)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return u.repo.FindByPhone(ctx, phone)
 }

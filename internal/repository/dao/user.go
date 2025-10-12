@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
@@ -13,17 +14,25 @@ var (
 	MysqlErrorDuplicateEmail = errors.New("邮箱已存在")
 )
 
-type UserDao struct {
+type UserDao interface {
+	Insert(ctx context.Context, user User) error
+	FindByEmail(ctx context.Context, email string) (User, error)
+	FindById(ctx context.Context, id int64) (User, error)
+	Save(ctx context.Context, user User) error
+	FindByPhone(ctx context.Context, phone string) (User, error)
+}
+
+type GormUserDao struct {
 	db *gorm.DB
 }
 
-func NewUserDao(db *gorm.DB) *UserDao {
-	return &UserDao{
+func NewUserDao(db *gorm.DB) UserDao {
+	return &GormUserDao{
 		db: db,
 	}
 }
 
-func (d *UserDao) Insert(ctx context.Context, user User) error {
+func (d *GormUserDao) Insert(ctx context.Context, user User) error {
 	user.CTime = time.Now().UnixMilli()
 	user.UTime = time.Now().UnixMilli()
 	err := d.db.WithContext(ctx).Create(&user).Error
@@ -36,13 +45,13 @@ func (d *UserDao) Insert(ctx context.Context, user User) error {
 	return err
 }
 
-func (d *UserDao) FindByEmail(ctx context.Context, email string) (User, error) {
+func (d *GormUserDao) FindByEmail(ctx context.Context, email string) (User, error) {
 	user := User{}
 	err := d.db.WithContext(ctx).Table("users").Where("email = ?", email).Find(&user).Error
 	return user, err
 }
 
-func (d *UserDao) FindById(ctx context.Context, id int64) (User, error) {
+func (d *GormUserDao) FindById(ctx context.Context, id int64) (User, error) {
 	user := User{}
 	err := d.db.WithContext(ctx).Table("users").Where("id = ?", id).Find(&user).Error
 	return user, err
@@ -52,14 +61,22 @@ func (d *UserDao) FindById(ctx context.Context, id int64) (User, error) {
 type User struct {
 	Id       int64 `gorm:"primaryKey,autoIncrement"`
 	Password string
-	Email    string `gorm:"unique"`
-	Nickname string `gorm:"nickname"`
-	Birthday string `gorm:"birthday"`
-	AboutMe  string `gorm:"about_me"`
-	CTime    int64  //毫秒数
-	UTime    int64  //毫秒数
+	Email    sql.NullString `gorm:"unique"`
+	Nickname string         `gorm:"nickname"`
+	Birthday string         `gorm:"birthday"`
+	AboutMe  string         `gorm:"about_me"`
+	CTime    int64          //毫秒数
+	UTime    int64          //毫秒数
+
+	Phone sql.NullString `gorm:"unique"`
 }
 
-func (d *UserDao) Save(ctx context.Context, user User) error {
+func (d *GormUserDao) Save(ctx context.Context, user User) error {
 	return d.db.WithContext(ctx).Table("users").Save(&user).Error
+}
+
+func (d *GormUserDao) FindByPhone(ctx context.Context, phone string) (User, error) {
+	user := User{}
+	err := d.db.WithContext(ctx).Table("users").Where("phone = ?", phone).Find(&user).Error
+	return user, err
 }

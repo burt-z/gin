@@ -110,7 +110,9 @@ ide 里面访问 service 里面暴露的 port,targetPort 对应 deployment里面
 # //go:build k8s 的作用,有两个变量 Config,加了 go:build 不会冲突
 go build -tags=k8s
 
-
+# 生成 mock文件 在极客目录下  /jike/gin/
+mockgen -source=gin/internal/service/code.go -package=svcmock -destination=gin/internal/service/mocks/code.mock.go
+mockgen -source=gin/internal/service/user.go -package=svcmock -destination=gin/internal/service/mocks/user.mock.go
 
 
 

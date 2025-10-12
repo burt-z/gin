@@ -10,7 +10,7 @@ spec:
     - protocol: TCP
 #      访问的端口
       port: 3309
-#      对应的是 deployment 里面容易里面暴露的端口
+#      对应的是 deployment 里面暴露的端口
       targetPort: 3306
   type: LoadBalancer
   
