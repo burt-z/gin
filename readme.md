@@ -115,6 +115,10 @@ mockgen -source=gin/internal/service/code.go -package=svcmock -destination=gin/i
 mockgen -source=gin/internal/service/user.go -package=svcmock -destination=gin/internal/service/mocks/user.mock.go
 
 
+# 测试 redis 在 gin目录下执行,没有 source,因为 NewCodeCache使用到了  redis.Cmdable 所以需要指定这个结构所在的包 github.com/redis/go-redis/v9和名字Cmdable
+mockgen -package=redismock -destination=internal/repository/cache/redismocks/cmdable.mock.go github.com/redis/go-redis/v9 Cmdable
+
+
 
 
 

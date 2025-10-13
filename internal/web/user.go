@@ -81,7 +81,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": "邮箱格式错误"})
 		return
 	}
-	member, err := u.svc.Login(ctx, domain.User{Email: p.Email, Password: p.Password})
+	member, err := u.svc.Login(ctx, p.Email, p.Password)
 	if err != nil {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": err.Error()})
 		return
@@ -117,7 +117,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": "邮箱格式错误"})
 		return
 	}
-	member, err := u.svc.Login(ctx, domain.User{Email: p.Email, Password: p.Password})
+	member, err := u.svc.Login(ctx, p.Email, p.Password)
 	if err != nil {
 		ctx.JSON(http.StatusOK, gin.H{"status": 200, "code": 50010, "msg": err.Error()})
 		return
