@@ -15,6 +15,7 @@ type UserService interface {
 	ProfileEdit(ctx context.Context, user domain.User) error
 	Profile(ctx context.Context, id int64) (domain.User, error)
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
 
 type userService struct {
@@ -75,4 +76,20 @@ func (u *userService) FindOrCreate(ctx context.Context, phone string) (domain.Us
 		return domain.User{}, err
 	}
 	return u.repo.FindByPhone(ctx, phone)
+}
+
+func (u *userService) FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error) {
+	domainUser, err := u.repo.FindByWeChat(ctx, wechatInfo.OpenID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.User{}, err
+	}
+	if domainUser.Id > 0 {
+		return domainUser, nil
+	}
+	newU := domain.User{WechatInfo: wechatInfo}
+	err = u.repo.Create(ctx, newU)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return u.repo.FindByWeChat(ctx, wechatInfo.OpenID)
 }

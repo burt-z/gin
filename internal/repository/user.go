@@ -15,6 +15,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user domain.User) error
 	FindById(ctx context.Context, id int64) (domain.User, error)
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
+	FindByWeChat(ctx context.Context, openId string) (domain.User, error)
 }
 
 type CacheUserRepository struct {
@@ -31,7 +32,12 @@ func NewUserRepository(dao dao.UserDao, cache cache.UserCache) UserRepository {
 
 // Create 数据层,没有 signup 的概念,所以是 create
 func (r *CacheUserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.dao.Insert(ctx, dao.User{Password: u.Password, Email: sql.NullString{Valid: u.Email != "", String: u.Email}})
+	return r.dao.Insert(ctx, dao.User{
+		Password:      u.Password,
+		Email:         sql.NullString{Valid: u.Email != "", String: u.Email},
+		WeChatOpenId:  sql.NullString{String: u.WechatInfo.OpenID, Valid: true},
+		WeChatUnionId: sql.NullString{String: u.WechatInfo.UnionID, Valid: true},
+	})
 }
 
 func (r *CacheUserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -88,12 +94,13 @@ func (r *CacheUserRepository) FindById(ctx context.Context, id int64) (domain.Us
 
 func DaoUserToDomainUser(ctx context.Context, u dao.User) domain.User {
 	return domain.User{
-		Id:       u.Id,
-		Email:    u.Email.String,
-		NickName: u.Nickname,
-		Birthday: u.Birthday,
-		AboutMe:  u.AboutMe,
-		Phone:    u.Phone.String,
+		Id:         u.Id,
+		Email:      u.Email.String,
+		NickName:   u.Nickname,
+		Birthday:   u.Birthday,
+		AboutMe:    u.AboutMe,
+		Phone:      u.Phone.String,
+		WechatInfo: domain.WechatInfo{OpenID: u.WeChatOpenId.String, UnionID: u.WeChatUnionId.String},
 	}
 }
 
@@ -112,6 +119,15 @@ func (r *CacheUserRepository) domainUserToEntity(ctx context.Context, u domain.U
 
 func (r *CacheUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	daoUser, err := r.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	domainUser := DaoUserToDomainUser(ctx, daoUser)
+	return domainUser, nil
+}
+
+func (r *CacheUserRepository) FindByWeChat(ctx context.Context, openId string) (domain.User, error) {
+	daoUser, err := r.dao.FindByWeChat(ctx, openId)
 	if err != nil {
 		return domain.User{}, err
 	}

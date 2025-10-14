@@ -12,7 +12,9 @@ import (
 	"jike_gin/internal/repository/dao"
 	"jike_gin/internal/service"
 	"jike_gin/internal/service/sms/memory"
+	"jike_gin/internal/service/wechat"
 	"jike_gin/internal/web"
+	ijwt "jike_gin/internal/web/jwt"
 	"jike_gin/internal/web/middleware"
 	"net/http"
 	"strings"
@@ -21,9 +23,24 @@ import (
 func main() {
 	db := initDb()
 	rdb := initRedis()
-	u := initUser(db, rdb)
+	//u := initUser(db, rdb)
+	ud := dao.NewUserDao(db)
+	uc := cache.NewUserCache(rdb)
+	repo := repository.NewUserRepository(ud, uc)
+	svc := service.NewUserService(repo)
+	codeCache := cache.NewCodeCache(rdb)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	smsService := memory.NewService()
+	codeSvc := service.NewCodeService(codeRepo, smsService)
+	redisJwt := ijwt.NewRedisJWTHandler(rdb)
+	u := web.NewUserHandler(svc, codeSvc, redisJwt)
+
 	server := initWebServer()
 	u.RegisterRoutes(server)
+
+	wechatService := wechat.NewService("", "", nil)
+	oAuthHandker := web.NewOAuth2WechatHandler(wechatService, svc)
+	oAuthHandker.RegisterRouter(server)
 
 	//server := gin.Default()
 	server.GET("/ping", func(ctx *gin.Context) {
@@ -48,19 +65,19 @@ func initRedis() redis.Cmdable {
 	return redisClient
 }
 
-func initUser(db *gorm.DB, rdb redis.Cmdable) *web.UserHandler {
-	ud := dao.NewUserDao(db)
-	uc := cache.NewUserCache(rdb)
-	repo := repository.NewUserRepository(ud, uc)
-	svc := service.NewUserService(repo)
-	codeCache := cache.NewCodeCache(rdb)
-	codeRepo := repository.NewCodeRepository(codeCache)
-	//c, _ := sms.NewClient(common.NewCredential("", ""), "", profile.NewClientProfile())
-	//smsService := tencent.NewService(context.Background(), "", "", c)
-	smsService := memory.NewService()
-	codeSvc := service.NewCodeService(codeRepo, smsService)
-	return web.NewUserHandler(svc, codeSvc)
-}
+//func initUser(db *gorm.DB, rdb redis.Cmdable) *web.UserHandler {
+//	ud := dao.NewUserDao(db)
+//	uc := cache.NewUserCache(rdb)
+//	repo := repository.NewUserRepository(ud, uc)
+//	svc := service.NewUserService(repo)
+//	codeCache := cache.NewCodeCache(rdb)
+//	codeRepo := repository.NewCodeRepository(codeCache)
+//	//c, _ := sms.NewClient(common.NewCredential("", ""), "", profile.NewClientProfile())
+//	//smsService := tencent.NewService(context.Background(), "", "", c)
+//	smsService := memory.NewService()
+//	codeSvc := service.NewCodeService(codeRepo, smsService)
+//	return web.NewUserHandler(svc, codeSvc)
+//}
 
 func initWebServer() *gin.Engine {
 	server := gin.Default()
@@ -99,7 +116,10 @@ func initWebServer() *gin.Engine {
 		IgnorePath("/users/login_sms/code/send").
 		IgnorePath("/users/login").
 		IgnorePath("/users/signup").
+		IgnorePath("/users/refresh_token").
+		IgnorePath("/oauth2/wechat/authurl").
 		Build())
+
 	return server
 }
 
