@@ -119,9 +119,13 @@ mockgen -source=gin/internal/service/user.go -package=svcmock -destination=gin/i
 mockgen -package=redismock -destination=internal/repository/cache/redismocks/cmdable.mock.go github.com/redis/go-redis/v9 Cmdable
 
 
+# 执行命令 使用 viper 读取启动参数
+go run . --config=config/dev.yaml
 
+etcdctl --endpoints=127.0.0.1:12379 put /gin "$(<dev.yaml)"
 
-
+# 监听配置变化,只能输出下面的不能知道哪个文件哪个字段发送变化
+配置变化===> WRITE         "config/dev.yaml"
 
 需要一个 service,一个 development 管理 3 个 pod
 

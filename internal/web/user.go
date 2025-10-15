@@ -296,7 +296,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 type Result struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
-	Data string `json:"data"`
+	Data any    `json:"data"`
 }
 
 func (u *UserHandler) Logout(ctx *gin.Context) {

@@ -1,12 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"jike_gin/config"
 	"jike_gin/internal/repository"
 	"jike_gin/internal/repository/cache"
 	"jike_gin/internal/repository/dao"
@@ -21,6 +27,9 @@ import (
 )
 
 func main() {
+
+	//InitViper()
+	InitLogger()
 	db := initDb()
 	rdb := initRedis()
 	//u := initUser(db, rdb)
@@ -42,6 +51,12 @@ func main() {
 	oAuthHandker := web.NewOAuth2WechatHandler(wechatService, svc)
 	oAuthHandker.RegisterRouter(server)
 
+	articleDao := dao.NewGORMArticleDAO(db)
+	articleRepo := repository.NewArticleRepository(articleDao)
+	articleSvc := service.NewArticleService(articleRepo)
+	articleHandler := web.NewArticleHandler(articleSvc)
+	articleHandler.RegisterRoutes(server)
+
 	//server := gin.Default()
 	server.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"error": "", "msg": "ping..."})
@@ -50,7 +65,9 @@ func main() {
 }
 
 func initDb() *gorm.DB {
-	db, err := gorm.Open(mysql.Open(config.Config.Db.DSN), &gorm.Config{})
+	dsn := viper.GetString("db.mysql.dsn")
+	fmt.Println("dsn", dsn)
+	db, err := gorm.Open(mysql.Open("root:root@tcp(gin-webook-mysql:3309)/webook"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -59,8 +76,9 @@ func initDb() *gorm.DB {
 }
 
 func initRedis() redis.Cmdable {
+	//addr := viper.GetString("redis.addr")
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: config.Config.Redis.Addr,
+		Addr: "gin-book-redis:10379",
 	})
 	return redisClient
 }
@@ -128,4 +146,87 @@ func CreateUser(db *gorm.DB) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+var tplId atomic.String
+
+func InitViper() {
+	//配置的名字,没有后缀
+	viper.SetConfigName("dev")
+	// 配置文件类型
+	viper.SetConfigType("yaml")
+
+	// 配置文件的路径,当前工作目录下的 config的子目录,可以有读个路径,扫描多个路径,允许 main 函数的时候是在
+	//jike 目录下,但是 golang 的 ide 的工具里面配置了允许路径是 jike/gin,所以找的还是 gin下的 config
+	viper.AddConfigPath("./config") // k8s 上找不到文件加,所以先将初始化方法去掉
+	//viper.AddConfigPath("$HOME/.appname")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+// InitViperV1 如何根据不同环境读取不同配置,使用参数
+func InitViperV1() {
+	//在go ide里面的运行配置里面程序实参增加  --config=config/dev.yaml
+	cfile := pflag.String("config", "config/dev.yaml", "配置文件路径")
+	pflag.Parse()
+	viper.SetConfigFile(*cfile)
+	// 监听文件变化
+	viper.WatchConfig()
+	// 设置默认值
+	tplId.Store("123")
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		// e 里面不含有变化内容,配置需要重新获取赋值
+		fmt.Println("配置变化===>", e)
+		// 从配置中读取
+		tplId.Store(viper.Get("tpl.id").(string))
+	})
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func InitViperRemote() {
+	viper.SetConfigType("yaml")
+	// 端口和compose.yaml里面一样,webook 是和其他使用 etcd的区分开
+	err := viper.AddRemoteProvider("etcd3", "127.0.0.1:12379", "gin")
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func InitLogger() {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	zap.ReplaceGlobals(logger)
+	zap.L().Info("create logger success")
+}
+func InitLogger2() {
+	myCore := MyCore{}
+	logger := zap.New(myCore)
+	zap.ReplaceGlobals(logger)
+	zap.L().Info("create logger success")
+}
+
+type MyCore struct {
+	zapcore.Core
+}
+
+// 全局替换
+func (c MyCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
+	for _, v := range fields {
+		if v.Key == "phone" {
+			phone := v.String
+			v.String = phone[:3] + "****" + phone[7:]
+		}
+	}
+	return c.Core.Write(entry, fields)
 }

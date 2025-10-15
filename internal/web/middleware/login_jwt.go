@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 	"jike_gin/consts"
 	"jike_gin/internal/web"
 	"net/http"
@@ -38,26 +39,26 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		authorization := ctx.GetHeader("authorization")
 		args := strings.Split(authorization, " ")
 		if len(args) != 2 {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "用户未登录"})
+			ctx.JSON(http.StatusUnauthorized, gin.H{"status": 200, "code": 50010, "msg": "长度问题:用户未登录"})
+			zap.L().Info("Build", zap.String("error", "长度不够"))
 			return
 		}
 		tokenStr := args[1]
-		fmt.Println("token", tokenStr)
 
 		userClaims := &web.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, userClaims, func(token *jwt.Token) (i interface{}, e error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(consts.GetAuthSecret()), e
+			return []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), e
 		})
 		if err != nil {
+			fmt.Println("Build ParseWithClaims error", err.Error())
+			zap.L().Info("Build ParseWithClaims error", zap.Error(err), zap.String("token", tokenStr))
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		fmt.Println("token.Valid", token.Valid)
 		if token == nil || !token.Valid {
+			fmt.Println("Build Valid error")
+			zap.L().Info("Build Valid error", zap.Error(err))
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -74,8 +75,10 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		if userClaims.UserAgent != ctx.Request.UserAgent() {
 			// 风险检查,设备信息是否一致
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
+			//ctx.AbortWithStatus(http.StatusUnauthorized)
+
+			zap.L().Info("Build agent error", zap.String("reqAgent", ctx.Request.UserAgent()), zap.String("userAgent", userClaims.UserAgent))
+			//return
 		}
 
 		userClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
@@ -84,6 +87,5 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		ctx.Header("x-jwt-token", tokenStr)
 		fmt.Println("build_jwt uid===>", userClaims.UId)
 		ctx.Set("user_id", userClaims.UId)
-
 	}
 }
