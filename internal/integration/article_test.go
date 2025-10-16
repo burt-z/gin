@@ -20,8 +20,11 @@ import (
 )
 
 type Article struct {
+	Id      int64
 	Title   string `json:"title"`
 	Content string `json:"content"`
+	Ctime   int64
+	Utime   int64
 }
 
 type Result[T any] struct {
@@ -57,8 +60,10 @@ func (s *ArticleTestSuite) SetupSuite() {
 
 }
 
+// TearDownTest 每一个都会执行
 func (s *ArticleTestSuite) TearDownTest() {
-	//s.db.Exec("TRUNCATE TABLE articles;")
+	// 清空所有数据，并且自增主键恢复到 1
+	s.db.Exec("TRUNCATE TABLE articles")
 }
 
 func (s *ArticleTestSuite) TestEdit() {
@@ -78,20 +83,56 @@ func (s *ArticleTestSuite) TestEdit() {
 			art: Article{
 				Title:   "我的标题",
 				Content: "我的内容",
+				Ctime:   1760537851838,
+				Utime:   1760537851838,
 			},
 			after: func(t *testing.T) {
 				var a dao.Article
-				err := s.db.Table("article").Where("id = ?", 1).Find(&a).Error
+				err := s.db.Table("articles").Where("id = ?", 1).Find(&a).Error
 				require.NoError(t, err)
 
-				assert.Equal(t, dao.Article{
-					Id:      1,
-					Title:   "我的标题",
-					Content: "我的内容",
-				}, a)
 			},
 			wantCode: http.StatusOK,
-			wantRes:  Result[int64]{Data: 1},
+			wantRes:  Result[int64]{Code: 0, Msg: "success", Data: 0},
+		},
+		{
+			name: "更新数据",
+			before: func(t *testing.T) {
+				//	先创建一个帖子
+				// 提前准备数据
+				err := s.db.Create(dao.Article{
+					Id:       10,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					AuthorId: 123,
+					// 跟时间有关的测试，不是逼不得已，不要用 time.Now()
+					// 因为 time.Now() 每次运行都不同，你很难断言
+					Ctime: 123,
+					Utime: 234,
+				}).Error
+				assert.NoError(t, err)
+			},
+			art: Article{
+				Id:      10,
+				Title:   "新的标题",
+				Content: "新的内容",
+			},
+			after: func(t *testing.T) {
+				var art dao.Article
+				err := s.db.Where("id=?", 10).First(&art).Error
+				assert.NoError(t, err)
+				// 是为了确保我更新了 Utime
+				art.Utime = 0
+				assert.Equal(t, dao.Article{
+					Id:       10,
+					Title:    "新的标题",
+					Content:  "新的内容",
+					Ctime:    123,
+					AuthorId: 123,
+				}, art)
+			},
+			wantCode: http.StatusOK,
+			wantRes:  Result[int64]{Code: 0, Msg: "success", Data: 10},
 		},
 	}
 
