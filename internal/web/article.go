@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 	"jike_gin/internal/domain"
 	"jike_gin/internal/service"
+	ijwt "jike_gin/internal/web/jwt"
 	"net/http"
 )
 
@@ -21,7 +22,9 @@ func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
 func (u *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	articleGroup := server.Group("/articles")
 	articleGroup.POST("/edit", u.Edit)
+	articleGroup.POST("/publish", u.Publish)
 }
+
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	type Req struct {
 		Title   string `json:"title"`
@@ -47,4 +50,49 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, Result{Code: 0, Msg: "success", Data: id})
 
+}
+
+func (h *ArticleHandler) Publish(ctx *gin.Context) {
+	userId := ctx.GetInt64("user_id")
+	var req ArticleReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	c := ctx.MustGet("claims")
+	claims, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		zap.L().Error("Publish claims", zap.Any("claims", claims))
+	}
+
+	id, err := h.svc.Publish(ctx, req.toDomainArticle(userId))
+	if err != nil {
+		zap.L().Error("保存文章错误", zap.Error(err))
+		ctx.JSON(http.StatusBadRequest, Result{
+			Code: 5001,
+			Msg:  "保存错误",
+			Data: "",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{Code: 0, Msg: "success", Data: id})
+
+}
+
+type ArticleReq struct {
+	Id      int64  `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+func (req ArticleReq) toDomainArticle(uid int64) domain.Article {
+	return domain.Article{
+		Id:      req.Id,
+		Title:   req.Title,
+		Content: req.Content,
+		Author: domain.Author{
+			Id: uid,
+		},
+	}
 }

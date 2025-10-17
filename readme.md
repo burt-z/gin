@@ -113,6 +113,10 @@ go build -tags=k8s
 # 生成 mock文件 在极客目录下  /jike/gin/
 mockgen -source=gin/internal/service/code.go -package=svcmock -destination=gin/internal/service/mocks/code.mock.go
 mockgen -source=gin/internal/service/user.go -package=svcmock -destination=gin/internal/service/mocks/user.mock.go
+mockgen -source=gin/internal/service/article.go -package=svcmock -destination=gin/internal/service/mocks/article.mock.go
+mockgen -source=gin/internal/repository/article/article.go -package=articlesmock -destination=gin/internal/repository/article/mocks/article.mock.go
+mockgen -source=gin/internal/repository/article/article_author.go -package=articlesmock -destination=gin/internal/repository/article/mocks/article_author.mock.go
+mockgen -source=gin/internal/repository/article/article_reader.go -package=articlesmock -destination=gin/internal/repository/article/mocks/article_reader.mock.go
 
 
 # 测试 redis 在 gin目录下执行,没有 source,因为 NewCodeCache使用到了  redis.Cmdable 所以需要指定这个结构所在的包 github.com/redis/go-redis/v9和名字Cmdable

@@ -14,8 +14,10 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"jike_gin/internal/repository"
+	articleRepo "jike_gin/internal/repository/article"
 	"jike_gin/internal/repository/cache"
 	"jike_gin/internal/repository/dao"
+	"jike_gin/internal/repository/dao/article"
 	"jike_gin/internal/service"
 	"jike_gin/internal/service/sms/memory"
 	"jike_gin/internal/service/wechat"
@@ -27,7 +29,6 @@ import (
 )
 
 func main() {
-
 	//InitViper()
 	InitLogger()
 	db := initDb()
@@ -51,9 +52,10 @@ func main() {
 	oAuthHandker := web.NewOAuth2WechatHandler(wechatService, svc)
 	oAuthHandker.RegisterRouter(server)
 
-	articleDao := dao.NewGORMArticleDAO(db)
-	articleRepo := repository.NewArticleRepository(articleDao)
-	articleSvc := service.NewArticleService(articleRepo)
+	articleDao := article.NewGORMArticleDAO(db)
+	articleRep := articleRepo.NewArticleRepository(articleDao, nil, nil, db)
+	articleSvc := service.NewArticleService(articleRep)
+	//articleSvc := service.NewArticleServiceV1(articleRepo)
 	articleHandler := web.NewArticleHandler(articleSvc)
 	articleHandler.RegisterRoutes(server)
 
