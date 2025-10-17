@@ -10,7 +10,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"jike_gin/internal/repository"
-	"jike_gin/internal/repository/dao"
+	"jike_gin/internal/repository/dao/article"
 	"jike_gin/internal/service"
 	"jike_gin/internal/web"
 	ijwt "jike_gin/internal/web/jwt"
@@ -51,7 +51,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 		panic(err)
 	}
 	s.db = db
-	d := dao.NewGORMArticleDAO(db)
+	d := article.NewGORMArticleDAO(db)
 	repo := repository.NewArticleRepository(d)
 	svc := service.NewArticleService(repo)
 	articleHandler := web.NewArticleHandler(svc)
@@ -87,7 +87,7 @@ func (s *ArticleTestSuite) TestEdit() {
 				Utime:   1760537851838,
 			},
 			after: func(t *testing.T) {
-				var a dao.Article
+				var a article.Article
 				err := s.db.Table("articles").Where("id = ?", 1).Find(&a).Error
 				require.NoError(t, err)
 
@@ -100,7 +100,7 @@ func (s *ArticleTestSuite) TestEdit() {
 			before: func(t *testing.T) {
 				//	先创建一个帖子
 				// 提前准备数据
-				err := s.db.Create(dao.Article{
+				err := s.db.Create(article.Article{
 					Id:       10,
 					Title:    "我的标题",
 					Content:  "我的内容",
@@ -118,12 +118,12 @@ func (s *ArticleTestSuite) TestEdit() {
 				Content: "新的内容",
 			},
 			after: func(t *testing.T) {
-				var art dao.Article
+				var art article.Article
 				err := s.db.Where("id=?", 10).First(&art).Error
 				assert.NoError(t, err)
 				// 是为了确保我更新了 Utime
 				art.Utime = 0
-				assert.Equal(t, dao.Article{
+				assert.Equal(t, article.Article{
 					Id:       10,
 					Title:    "新的标题",
 					Content:  "新的内容",
